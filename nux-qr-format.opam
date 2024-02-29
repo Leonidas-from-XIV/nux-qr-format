@@ -10,6 +10,8 @@ bug-reports: "https://github.com/Leonidas-from-XIV/nux-qr-format/issues"
 depends: [
   "dune" {>= "3.14"}
   "ocaml" {>= "4.08"}
+  "stdio" {>= "v0.15"}
+  "base" {>= "v0.15"}
   "base64" {>= "3.5"}
   "odoc" {with-doc}
 ]
