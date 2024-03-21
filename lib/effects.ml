@@ -349,3 +349,31 @@ module DLYDef : Pedal = struct
 end
 
 module DLY = Reader (DLYDef)
+
+module RVBDef : Pedal = struct
+  let name = "RVB"
+  let switch_addr = 0x0A
+  let param_offset = 0x48
+
+  let variants =
+    let level = percentage "Level" in
+    let decay = percentage "Decay" in
+    let mix = percentage "Mix" in
+    [
+      { Variant.name = "Room"; params = [ decay; percentage "Tone"; level ] };
+      {
+        name = "Hall";
+        params =
+          [ decay; percentage "Pre Delay"; percentage "Liveliness"; level ];
+      };
+      { name = "Plate"; params = [ decay; level ] };
+      { name = "Spring"; params = [ decay; level ] };
+      {
+        name = "Shimmer";
+        params = [ percentage "Mix"; decay; percentage "Shim" ];
+      };
+      { name = "Damp"; params = [ mix; percentage "Depth" ] };
+    ]
+end
+
+module RVB = Reader (RVBDef)

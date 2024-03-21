@@ -6,6 +6,7 @@ type effect =
   | EQ of Effects.EQ.t
   | Mod of Effects.Mod.t
   | DLY of Effects.DLY.t
+  | RVB of Effects.RVB.t
 
 type t = effect list
 
@@ -17,6 +18,7 @@ let pp_effect ppf = function
   | EQ eq -> Fmt.pf ppf "%a" Effects.EQ.pp eq
   | Mod mod' -> Fmt.pf ppf "%a" Effects.Mod.pp mod'
   | DLY dly -> Fmt.pf ppf "%a" Effects.DLY.pp dly
+  | RVB rvb -> Fmt.pf ppf "%a" Effects.RVB.pp rvb
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -53,6 +55,7 @@ let decode v =
       | Eq -> Some (EQ (Effects.EQ.decode v))
       | Mod -> Some (Mod (Effects.Mod.decode v))
       | DLY -> Some (DLY (Effects.DLY.decode v))
+      | RVB -> Some (RVB (Effects.RVB.decode v))
       | _otherwise ->
           (* TODO remove this eventually, it should crash *)
           None)
