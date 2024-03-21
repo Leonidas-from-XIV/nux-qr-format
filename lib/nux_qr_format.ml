@@ -15,10 +15,31 @@ module type Pedal = sig
   val variants : variant list
 end
 
+module Fmt = struct
+  type 'a t = Format.formatter -> 'a -> unit
+
+  let pf = Format.fprintf
+  let any const ppf _don't_care = pf ppf "%s" const
+
+  let rec list ~sep pp_elt ppf v =
+    match v with
+    | [] -> ()
+    | [ x ] -> pf ppf "%a" pp_elt x
+    | [ x; y ] ->
+        pf ppf "%a" pp_elt x;
+        sep ppf ();
+        pf ppf "%a" pp_elt y
+    | x :: xs ->
+        pf ppf "%a" pp_elt x;
+        sep ppf ();
+        list ~sep pp_elt ppf xs
+end
+
 module type Parsed = sig
   type t
 
   val decode : string -> t
+  val pp : t Fmt.t
 end
 
 module Reader (P : Pedal) : Parsed = struct
@@ -27,7 +48,8 @@ module Reader (P : Pedal) : Parsed = struct
     let mask = 0x40 in
     let enabled = v land mask = mask in
     let effect = (v lor mask) - mask in
-    (enabled, effect)
+    (* the effects start at 1, but our lists start at 0 *)
+    (enabled, effect - 1)
 
   let decode bin =
     let enabled, variant_id = bin.[P.switch_addr] |> switch_to_value in
@@ -44,6 +66,9 @@ module Reader (P : Pedal) : Parsed = struct
     (enabled, variant)
 
   type t = bool * variant
+
+  let pp ppf (enabled, _variant) =
+    Fmt.pf ppf "<enabled: %B: variant ??>" enabled
 end
 
 module Noisegate : Pedal = struct
@@ -104,7 +129,11 @@ end
 module Comp = Reader (Compressor)
 
 type effect = Noisegate of NG.t | Compressor of Comp.t
-type preset = effect list
+type t = effect list
+
+let pp_effect ppf = function
+  | Noisegate ng -> Fmt.pf ppf "%a" NG.pp ng
+  | _otherwise -> Fmt.pf ppf "<not implemented>"
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -132,9 +161,16 @@ let decode v =
         let value = int_of_char @@ v.[order_offset + off] in
         order_of_byte value)
   in
-  List.map
+  List.filter_map
     (function
-      | Gate -> Noisegate (NG.decode v)
-      | Comp -> Compressor (Comp.decode v)
-      | _otherwise -> failwith "not implemented yet")
+      | Gate -> Some (Noisegate (NG.decode v))
+      | Comp -> Some (Compressor (Comp.decode v))
+      | _otherwise ->
+          (* TODO remove this eventually, it should crash *)
+          None)
     effect_order
+
+let pp ppf v =
+  let sep = Fmt.any "\n" in
+  let fmt : effect list Fmt.t = Fmt.list ~sep pp_effect in
+  Fmt.pf ppf "%a" fmt v
