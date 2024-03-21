@@ -1,20 +1,3 @@
-type formatter = Switch | Toggle of int | Percentage
-
-type param = {
-  name : string;
-  (* value of the parameter *)
-  value : int;
-  formatter : formatter;
-}
-
-type variant = { name : string; params : param list }
-
-module type Pedal = sig
-  val switch_addr : int
-  val param_offset : int
-  val variants : variant list
-end
-
 module Fmt = struct
   type 'a t = Format.formatter -> 'a -> unit
 
@@ -33,6 +16,41 @@ module Fmt = struct
         pf ppf "%a" pp_elt x;
         sep ppf ();
         list ~sep pp_elt ppf xs
+end
+
+type formatter = Switch | Toggle of int | Percentage
+
+module Param = struct
+  type t = {
+    name : string;
+    (* value of the parameter *)
+    value : int;
+    formatter : formatter;
+  }
+
+  let pp ppf { name; value; formatter } =
+    let pp_value =
+      match formatter with
+      | Percentage -> fun ppf v -> Fmt.pf ppf "%d%%" v
+      | _ -> fun ppf _v -> Fmt.pf ppf "TODO"
+    in
+    Fmt.pf ppf "%s=%a" name pp_value value
+end
+
+module Variant = struct
+  type t = { name : string; params : Param.t list }
+
+  let pp ppf { name; params } =
+    Fmt.pf ppf "%S; params = [%a]" name
+      (Fmt.list ~sep:(Fmt.any ", ") Param.pp)
+      params
+end
+
+module type Pedal = sig
+  val switch_addr : int
+  val param_offset : int
+  val variants : Variant.t list
+  val name : string
 end
 
 module type Parsed = sig
@@ -59,26 +77,27 @@ module Reader (P : Pedal) : Parsed = struct
       List.mapi
         (fun off param ->
           let value = bin.[P.param_offset + off] |> int_of_char in
-          { param with value })
+          { param with Param.value })
         params
     in
     let variant = { variant with params } in
     (enabled, variant)
 
-  type t = bool * variant
+  type t = bool * Variant.t
 
-  let pp ppf (enabled, _variant) =
-    Fmt.pf ppf "<enabled: %B: variant ??>" enabled
+  let pp ppf (enabled, variant) =
+    Fmt.pf ppf "<%s enabled: %B: variant %a>" P.name enabled Variant.pp variant
 end
 
-module Noisegate : Pedal = struct
+module NoisegateDef : Pedal = struct
+  let name = "Gate"
   let switch_addr = 0x07
   let param_offset = 0x34
 
   let variants =
     [
       {
-        name = "Noise Gate";
+        Variant.name = "Noise Gate";
         params =
           [
             { name = "Sens"; value = 0; formatter = Percentage };
@@ -88,16 +107,17 @@ module Noisegate : Pedal = struct
     ]
 end
 
-module NG = Reader (Noisegate)
+module Noisegate = Reader (NoisegateDef)
 
-module Compressor : Pedal = struct
+module CompressorDef : Pedal = struct
+  let name = "Compressor"
   let switch_addr = 0x03
   let param_offset = 0x11
 
   let variants =
     [
       {
-        name = "Rose Comp";
+        Variant.name = "Rose Comp";
         params =
           [
             { name = "Sustain"; value = 0; formatter = Percentage };
@@ -126,14 +146,14 @@ module Compressor : Pedal = struct
     ]
 end
 
-module Comp = Reader (Compressor)
+module Compressor = Reader (CompressorDef)
 
-type effect = Noisegate of NG.t | Compressor of Comp.t
+type effect = Noisegate of Noisegate.t | Compressor of Compressor.t
 type t = effect list
 
 let pp_effect ppf = function
-  | Noisegate ng -> Fmt.pf ppf "%a" NG.pp ng
-  | _otherwise -> Fmt.pf ppf "<not implemented>"
+  | Noisegate ng -> Fmt.pf ppf "%a" Noisegate.pp ng
+  | Compressor comp -> Fmt.pf ppf "%a" Compressor.pp comp
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -163,8 +183,8 @@ let decode v =
   in
   List.filter_map
     (function
-      | Gate -> Some (Noisegate (NG.decode v))
-      | Comp -> Some (Compressor (Comp.decode v))
+      | Gate -> Some (Noisegate (Noisegate.decode v))
+      | Comp -> Some (Compressor (Compressor.decode v))
       | _otherwise ->
           (* TODO remove this eventually, it should crash *)
           None)
