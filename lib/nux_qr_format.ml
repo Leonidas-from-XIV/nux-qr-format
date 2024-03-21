@@ -71,7 +71,13 @@ module Reader (P : Pedal) : Parsed = struct
 
   let decode bin =
     let enabled, variant_id = bin.[P.switch_addr] |> switch_to_value in
-    let variant = List.nth P.variants variant_id in
+    let variant =
+      match List.nth_opt P.variants variant_id with
+      | Some variant -> variant
+      | None ->
+          Format.asprintf "Looking up effect variant %d failed" variant_id
+          |> failwith
+    in
     let params = variant.params in
     let params =
       List.mapi
@@ -89,6 +95,8 @@ module Reader (P : Pedal) : Parsed = struct
     Fmt.pf ppf "<%s enabled: %B: variant %a>" P.name enabled Variant.pp variant
 end
 
+let percentage name = { Param.name; value = 0; formatter = Percentage }
+
 module NoisegateDef : Pedal = struct
   let name = "Gate"
   let switch_addr = 0x07
@@ -98,11 +106,7 @@ module NoisegateDef : Pedal = struct
     [
       {
         Variant.name = "Noise Gate";
-        params =
-          [
-            { name = "Sens"; value = 0; formatter = Percentage };
-            { name = "Decay"; value = 0; formatter = Percentage };
-          ];
+        params = [ percentage "Sens"; percentage "Decay" ];
       };
     ]
 end
@@ -118,29 +122,21 @@ module CompressorDef : Pedal = struct
     [
       {
         Variant.name = "Rose Comp";
-        params =
-          [
-            { name = "Sustain"; value = 0; formatter = Percentage };
-            { name = "Level"; value = 0; formatter = Percentage };
-          ];
+        params = [ percentage "Sustain"; percentage "Level" ];
       };
       {
         name = "K Comp";
         params =
-          [
-            { name = "Sustain"; value = 0; formatter = Percentage };
-            { name = "Level"; value = 0; formatter = Percentage };
-            { name = "Clipping"; value = 0; formatter = Percentage };
-          ];
+          [ percentage "Sustain"; percentage "Level"; percentage "Clipping" ];
       };
       {
         name = "Studio Comp";
         params =
           [
-            { name = "Thr"; value = 0; formatter = Percentage };
-            { name = "Ratio"; value = 0; formatter = Percentage };
-            { name = "Gain"; value = 0; formatter = Percentage };
-            { name = "Release"; value = 0; formatter = Percentage };
+            percentage "Thr";
+            percentage "Ratio";
+            percentage "Gain";
+            percentage "Release";
           ];
       };
     ]
@@ -148,12 +144,95 @@ end
 
 module Compressor = Reader (CompressorDef)
 
-type effect = Noisegate of Noisegate.t | Compressor of Compressor.t
+module EFXDef : Pedal = struct
+  let name = "EFX"
+  let switch_addr = 0x04
+  let param_offset = 0x16
+
+  let variants =
+    [
+      {
+        Variant.name = "Distortion+";
+        params = [ percentage "Output"; percentage "Sensivity" ];
+      };
+      {
+        name = "RC Boost";
+        params =
+          [
+            percentage "Gain";
+            percentage "Volume";
+            percentage "Bass";
+            percentage "Treble";
+          ];
+      };
+      {
+        name = "AC Boost";
+        params =
+          [
+            percentage "Gain";
+            percentage "Volume";
+            percentage "Bass";
+            percentage "Treble";
+          ];
+      };
+      {
+        name = "Dist One";
+        params = [ percentage "Level"; percentage "Tone"; percentage "Drive" ];
+      };
+      {
+        name = "T Screamer";
+        params = [ percentage "Drive"; percentage "Tone"; percentage "Level" ];
+      };
+      {
+        name = "Blues Drv";
+        params = [ percentage "Level"; percentage "Tone"; percentage "Gain" ];
+      };
+      {
+        name = "Morning Drv";
+        params = [ percentage "Volume"; percentage "Drive"; percentage "Tone" ];
+      };
+      {
+        name = "Eat Dist";
+        params =
+          [ percentage "Distortion"; percentage "Filter"; percentage "Volume" ];
+      };
+      {
+        name = "Red Dirt";
+        params = [ percentage "Drive"; percentage "Tone"; percentage "Level" ];
+      };
+      {
+        name = "Crunch";
+        params = [ percentage "Volume"; percentage "Tone"; percentage "Gain" ];
+      };
+      {
+        name = "Muff Fuzz";
+        params =
+          [ percentage "Volume"; percentage "Tone"; percentage "Sustain" ];
+      };
+      {
+        name = "Katana";
+        params =
+          [
+            { name = "Boost"; value = 0; formatter = Switch };
+            percentage "Volume";
+          ];
+      };
+    ]
+end
+
+module EFX = Reader (EFXDef)
+
+type effect =
+  | Noisegate of Noisegate.t
+  | Compressor of Compressor.t
+  | EFX of EFX.t
+
 type t = effect list
 
 let pp_effect ppf = function
   | Noisegate ng -> Fmt.pf ppf "%a" Noisegate.pp ng
   | Compressor comp -> Fmt.pf ppf "%a" Compressor.pp comp
+  | EFX efx -> Fmt.pf ppf "%a" EFX.pp efx
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -185,6 +264,7 @@ let decode v =
     (function
       | Gate -> Some (Noisegate (Noisegate.decode v))
       | Comp -> Some (Compressor (Compressor.decode v))
+      | EFX -> Some (EFX (EFX.decode v))
       | _otherwise ->
           (* TODO remove this eventually, it should crash *)
           None)
