@@ -1,4 +1,4 @@
-type formatter = Switch | Toggle of int | Percentage
+type formatter = Switch | Toggle of string list | Percentage
 
 module Param = struct
   type t = {
@@ -55,7 +55,7 @@ module Reader (P : Pedal) : Parsed = struct
       match List.nth_opt P.variants variant_id with
       | Some variant -> variant
       | None ->
-          let max = List.length P.variants in
+          let max = List.length P.variants - 1 in
           Format.asprintf
             "Looking up effect variant %d failed (only up to %d supported)"
             variant_id max
@@ -84,7 +84,7 @@ let percentage name = param name Percentage
 module NoisegateDef : Pedal = struct
   let name = "Gate"
   let switch_addr = 0x07
-  let param_offset = 0x34
+  let param_offset = 0x33
 
   let variants =
     [
@@ -170,7 +170,7 @@ module EFX = Reader (EFXDef)
 module AmpDef : Pedal = struct
   let name = "Amp"
   let switch_addr = 0x05
-  let param_offset = 0x33
+  let param_offset = 0x1D
 
   let variants =
     let gain = percentage "Gain" in
@@ -217,3 +217,100 @@ module AmpDef : Pedal = struct
 end
 
 module Amp = Reader (AmpDef)
+
+module EQDef : Pedal = struct
+  let name = "EQ"
+  let switch_addr = 0x06
+  let param_offset = 0x26
+
+  let variants =
+    [
+      {
+        Variant.name = "6-Band";
+        (* TODO wrong, these are sliders *)
+        params =
+          [
+            percentage "100";
+            percentage "220";
+            percentage "500";
+            percentage "1.2K";
+            percentage "2.6K";
+            percentage "6.4K";
+          ];
+      };
+      {
+        name = "10-Band";
+        params =
+          [
+            percentage "Vol";
+            percentage "31.25";
+            percentage "62.5";
+            percentage "125";
+            percentage "250";
+            percentage "500";
+            percentage "1K";
+            percentage "2K";
+            percentage "4K";
+            percentage "8K";
+            percentage "16K";
+          ];
+      };
+    ]
+end
+
+module EQ = Reader (EQDef)
+
+module ModDef : Pedal = struct
+  let name = "Mod"
+  let switch_addr = 0x08
+  let param_offset = 0x38
+
+  let variants =
+    let depth = percentage "Depth" in
+    let rate = percentage "Rate" in
+    let intensity = percentage "Intensity" in
+    let width = percentage "Width" in
+    let speed = percentage "Speed" in
+    [
+      { Variant.name = "CE-1"; params = [ intensity; depth; rate ] };
+      { name = "CE-2"; params = [ depth; rate ] };
+      { name = "ST Chorus"; params = [ intensity; width; rate ] };
+      { name = "Vibrato"; params = [ rate; depth ] };
+      {
+        name = "Detune";
+        params =
+          [ percentage "Shift-L"; percentage "Mix"; percentage "Shift-R" ];
+      };
+      {
+        name = "Flanger";
+        params = [ percentage "Level"; rate; width; percentage "F.Back" ];
+      };
+      { name = "Phase 90"; params = [ speed ] };
+      { name = "Phase 100"; params = [ intensity; speed ] };
+      {
+        name = "S.C.F.";
+        params =
+          [
+            (* TODO investigate *)
+            param "Mode" (Toggle [ "Chorus"; "P.M."; "Flanger" ]);
+            speed;
+            width;
+            intensity;
+          ];
+      };
+      {
+        name = "U-Vibe";
+        params =
+          [
+            speed;
+            percentage "Volume";
+            param "Mode" (Toggle [ "Chorus"; "Vibrato" ]);
+          ];
+      };
+      { name = "Tremolo"; params = [ rate; depth ] };
+      { name = "Rotary"; params = [ percentage "Balance"; speed ] };
+      { name = "SCH-1"; params = [ rate; depth; percentage "Tone" ] };
+    ]
+end
+
+module Mod = Reader (ModDef)

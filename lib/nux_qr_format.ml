@@ -3,6 +3,8 @@ type effect =
   | Compressor of Effects.Compressor.t
   | EFX of Effects.EFX.t
   | Amp of Effects.Amp.t
+  | EQ of Effects.EQ.t
+  | Mod of Effects.Mod.t
 
 type t = effect list
 
@@ -11,6 +13,8 @@ let pp_effect ppf = function
   | Compressor comp -> Fmt.pf ppf "%a" Effects.Compressor.pp comp
   | EFX efx -> Fmt.pf ppf "%a" Effects.EFX.pp efx
   | Amp amp -> Fmt.pf ppf "%a" Effects.Amp.pp amp
+  | EQ eq -> Fmt.pf ppf "%a" Effects.EQ.pp eq
+  | Mod mod' -> Fmt.pf ppf "%a" Effects.Mod.pp mod'
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -44,6 +48,8 @@ let decode v =
       | Comp -> Some (Compressor (Effects.Compressor.decode v))
       | EFX -> Some (EFX (Effects.EFX.decode v))
       | Amp -> Some (Amp (Effects.Amp.decode v))
+      | Eq -> Some (EQ (Effects.EQ.decode v))
+      | Mod -> Some (Mod (Effects.Mod.decode v))
       | _otherwise ->
           (* TODO remove this eventually, it should crash *)
           None)
