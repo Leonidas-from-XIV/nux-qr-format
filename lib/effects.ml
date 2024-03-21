@@ -377,3 +377,59 @@ module RVBDef : Pedal = struct
 end
 
 module RVB = Reader (RVBDef)
+
+module IRDef : Pedal = struct
+  let name = "IR"
+  let switch_addr = 0x0B
+  let param_offset = 0x50
+
+  let variants =
+    (* these are all kind of wrong, need to investigate *)
+    let level = percentage "Level" in
+    let low_cut = percentage "Low Cut" in
+    let high_cut = percentage "Hight Cut" in
+    (* all IRs have the same params *)
+    let params = [ level; low_cut; high_cut ] in
+    List.map
+      (fun name -> { Variant.name; params })
+      [
+        "JR120";
+        "DR112";
+        "TR212";
+        "HIWIRE412";
+        "Cali 112";
+        "A112";
+        "GB412";
+        "M1960AX";
+        "M1960AV";
+        "M1960TV";
+        "SLO412";
+        "FIREMAN412";
+        "RECT 412";
+        "DIE412";
+        "MATCH212";
+        "UBER412";
+        "BS410";
+        "A212";
+        "M1960AHW";
+        "M1936";
+        "BUDDA112";
+        "Z212";
+        "SUPERVERB410";
+        "VIBROKING310";
+        "AGL_DB810";
+        "AMP_SV212";
+        "AMP_SV410";
+        "AMP_SV810";
+        "BASSGUY410";
+        "EDED410";
+        "MKB410";
+        "G-HIBIRD";
+        "G-J15";
+        "M-D45";
+        "CT-Bogna-T75";
+        "CT-BritJH-G12M";
+      ]
+end
+
+module IR = Reader (IRDef)

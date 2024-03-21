@@ -7,6 +7,7 @@ type effect =
   | Mod of Effects.Mod.t
   | DLY of Effects.DLY.t
   | RVB of Effects.RVB.t
+  | IR of Effects.IR.t
 
 type t = effect list
 
@@ -19,6 +20,7 @@ let pp_effect ppf = function
   | Mod mod' -> Fmt.pf ppf "%a" Effects.Mod.pp mod'
   | DLY dly -> Fmt.pf ppf "%a" Effects.DLY.pp dly
   | RVB rvb -> Fmt.pf ppf "%a" Effects.RVB.pp rvb
+  | IR ir -> Fmt.pf ppf "%a" Effects.IR.pp ir
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -46,19 +48,17 @@ let decode v =
         let value = int_of_char @@ v.[order_offset + off] in
         order_of_byte value)
   in
-  List.filter_map
+  List.map
     (function
-      | Gate -> Some (Noisegate (Effects.Noisegate.decode v))
-      | Comp -> Some (Compressor (Effects.Compressor.decode v))
-      | EFX -> Some (EFX (Effects.EFX.decode v))
-      | Amp -> Some (Amp (Effects.Amp.decode v))
-      | Eq -> Some (EQ (Effects.EQ.decode v))
-      | Mod -> Some (Mod (Effects.Mod.decode v))
-      | DLY -> Some (DLY (Effects.DLY.decode v))
-      | RVB -> Some (RVB (Effects.RVB.decode v))
-      | _otherwise ->
-          (* TODO remove this eventually, it should crash *)
-          None)
+      | Gate -> Noisegate (Effects.Noisegate.decode v)
+      | Comp -> Compressor (Effects.Compressor.decode v)
+      | EFX -> EFX (Effects.EFX.decode v)
+      | Amp -> Amp (Effects.Amp.decode v)
+      | Eq -> EQ (Effects.EQ.decode v)
+      | Mod -> Mod (Effects.Mod.decode v)
+      | DLY -> DLY (Effects.DLY.decode v)
+      | RVB -> RVB (Effects.RVB.decode v)
+      | IR -> IR (Effects.IR.decode v))
     effect_order
 
 let pp ppf v =
