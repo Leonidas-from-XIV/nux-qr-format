@@ -314,3 +314,38 @@ module ModDef : Pedal = struct
 end
 
 module Mod = Reader (ModDef)
+
+module DLYDef : Pedal = struct
+  let name = "DLY"
+  let switch_addr = 0x09
+  let param_offset = 0x3F
+
+  let variants =
+    let repeat = percentage "Repeat" in
+    let d_time = percentage "D.Time" in
+    [
+      {
+        Variant.name = "Analog";
+        params =
+          [ percentage "Rate"; percentage "Echo"; percentage "Intensity" ];
+      };
+      {
+        name = "Digital";
+        params = [ percentage "E.Level"; percentage "F.Back"; d_time ];
+      };
+      {
+        name = "Moduluation";
+        params =
+          [
+            percentage "D-Time"; percentage "D-Level"; percentage "Mod"; repeat;
+          ];
+      };
+      {
+        name = "Tape Echo";
+        params = [ percentage "Time"; percentage "Level"; repeat ];
+      };
+      { name = "Pan Delay"; params = [ d_time; repeat; percentage "D.Level" ] };
+    ]
+end
+
+module DLY = Reader (DLYDef)
