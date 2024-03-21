@@ -55,7 +55,10 @@ module Reader (P : Pedal) : Parsed = struct
       match List.nth_opt P.variants variant_id with
       | Some variant -> variant
       | None ->
-          Format.asprintf "Looking up effect variant %d failed" variant_id
+          let max = List.length P.variants in
+          Format.asprintf
+            "Looking up effect variant %d failed (only up to %d supported)"
+            variant_id max
           |> failwith
     in
     let params = variant.params in
@@ -75,7 +78,8 @@ module Reader (P : Pedal) : Parsed = struct
     Fmt.pf ppf "<%s enabled: %B: variant %a>" P.name enabled Variant.pp variant
 end
 
-let percentage name = { Param.name; value = 0; formatter = Percentage }
+let param name formatter = { Param.name; value = 0; formatter }
+let percentage name = param name Percentage
 
 module NoisegateDef : Pedal = struct
   let name = "Gate"
@@ -130,75 +134,86 @@ module EFXDef : Pedal = struct
   let param_offset = 0x16
 
   let variants =
+    let gain = percentage "Gain" in
+    let volume = percentage "Volume" in
+    let level = percentage "Level" in
+    let tone = percentage "Tone" in
+    let drive = percentage "Drive" in
+    let boost = [ gain; volume; percentage "Bass"; percentage "Treble" ] in
     [
       {
         Variant.name = "Distortion+";
         params = [ percentage "Output"; percentage "Sensivity" ];
       };
-      {
-        name = "RC Boost";
-        params =
-          [
-            percentage "Gain";
-            percentage "Volume";
-            percentage "Bass";
-            percentage "Treble";
-          ];
-      };
-      {
-        name = "AC Boost";
-        params =
-          [
-            percentage "Gain";
-            percentage "Volume";
-            percentage "Bass";
-            percentage "Treble";
-          ];
-      };
-      {
-        name = "Dist One";
-        params = [ percentage "Level"; percentage "Tone"; percentage "Drive" ];
-      };
-      {
-        name = "T Screamer";
-        params = [ percentage "Drive"; percentage "Tone"; percentage "Level" ];
-      };
-      {
-        name = "Blues Drv";
-        params = [ percentage "Level"; percentage "Tone"; percentage "Gain" ];
-      };
-      {
-        name = "Morning Drv";
-        params = [ percentage "Volume"; percentage "Drive"; percentage "Tone" ];
-      };
+      { name = "RC Boost"; params = boost };
+      { name = "AC Boost"; params = boost };
+      { name = "Dist One"; params = [ level; tone; drive ] };
+      { name = "T Screamer"; params = [ drive; tone; level ] };
+      { name = "Blues Drv"; params = [ level; tone; gain ] };
+      { name = "Morning Drv"; params = [ volume; drive; tone ] };
       {
         name = "Eat Dist";
-        params =
-          [ percentage "Distortion"; percentage "Filter"; percentage "Volume" ];
+        params = [ percentage "Distortion"; percentage "Filter"; volume ];
       };
-      {
-        name = "Red Dirt";
-        params = [ percentage "Drive"; percentage "Tone"; percentage "Level" ];
-      };
-      {
-        name = "Crunch";
-        params = [ percentage "Volume"; percentage "Tone"; percentage "Gain" ];
-      };
-      {
-        name = "Muff Fuzz";
-        params =
-          [ percentage "Volume"; percentage "Tone"; percentage "Sustain" ];
-      };
+      { name = "Red Dirt"; params = [ drive; tone; level ] };
+      { name = "Crunch"; params = [ volume; tone; gain ] };
+      { name = "Muff Fuzz"; params = [ volume; tone; percentage "Sustain" ] };
       {
         name = "Katana";
-        params =
-          [
-            { name = "Boost"; value = 0; formatter = Switch };
-            percentage "Volume";
-          ];
+        params = [ { name = "Boost"; value = 0; formatter = Switch }; volume ];
       };
     ]
 end
 
 module EFX = Reader (EFXDef)
 
+module AmpDef : Pedal = struct
+  let name = "Amp"
+  let switch_addr = 0x05
+  let param_offset = 0x33
+
+  let variants =
+    let gain = percentage "Gain" in
+    let master = percentage "Master" in
+    let bass = percentage "Bass" in
+    let middle = percentage "Middle" in
+    let treble = percentage "Treble" in
+    let presence = percentage "Presence" in
+    let bright = param "Bright" Switch in
+    let mid_freq = percentage "Mid Freq" in
+    let cut = percentage "Cut" in
+    let gmbmtp = [ gain; master; bass; middle; treble; presence ] in
+    let gmbmmt = [ gain; master; bass; mid_freq; middle; treble ] in
+    let nux = [ gain; master; bass; middle; treble ] in
+    [
+      {
+        Variant.name = "Jazz Clean";
+        params = [ gain; master; bass; middle; treble; bright ];
+      };
+      { name = "Deluxe Rvb"; params = [ gain; master; bass; middle; treble ] };
+      { name = "Bass Mate"; params = gmbmtp };
+      { name = "Tweedy"; params = [ gain; master; percentage "Tone" ] };
+      { name = "Hiwire"; params = gmbmtp };
+      { name = "Cali Crunch"; params = gmbmtp };
+      { name = "Class A30"; params = [ gain; master; bass; treble; cut ] };
+      { name = "Plexi 100"; params = gmbmtp };
+      { name = "Plexi 45"; params = gmbmtp };
+      { name = "Brit 800"; params = gmbmtp };
+      { name = "1987 X 50"; params = gmbmtp };
+      { name = "SLO 100"; params = gmbmtp };
+      { name = "Fireman HBE"; params = gmbmtp };
+      { name = "Dual Rect"; params = gmbmtp };
+      { name = "Die VH4"; params = gmbmtp };
+      { name = "Mr. Z38"; params = [ gain; master; bass; treble; cut ] };
+      {
+        name = "Super Rvb";
+        params = [ gain; master; bass; middle; treble; bright ];
+      };
+      { name = "AGL"; params = gmbmmt };
+      { name = "MLD"; params = gmbmmt };
+      { name = "Optima Air"; params = nux };
+      { name = "Stageman"; params = nux };
+    ]
+end
+
+module Amp = Reader (AmpDef)

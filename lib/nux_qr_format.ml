@@ -2,6 +2,7 @@ type effect =
   | Noisegate of Effects.Noisegate.t
   | Compressor of Effects.Compressor.t
   | EFX of Effects.EFX.t
+  | Amp of Effects.Amp.t
 
 type t = effect list
 
@@ -9,6 +10,7 @@ let pp_effect ppf = function
   | Noisegate ng -> Fmt.pf ppf "%a" Effects.Noisegate.pp ng
   | Compressor comp -> Fmt.pf ppf "%a" Effects.Compressor.pp comp
   | EFX efx -> Fmt.pf ppf "%a" Effects.EFX.pp efx
+  | Amp amp -> Fmt.pf ppf "%a" Effects.Amp.pp amp
 
 (* have not observed any other values *)
 let header = "\x0F\x01\x00"
@@ -41,6 +43,7 @@ let decode v =
       | Gate -> Some (Noisegate (Effects.Noisegate.decode v))
       | Comp -> Some (Compressor (Effects.Compressor.decode v))
       | EFX -> Some (EFX (Effects.EFX.decode v))
+      | Amp -> Some (Amp (Effects.Amp.decode v))
       | _otherwise ->
           (* TODO remove this eventually, it should crash *)
           None)
