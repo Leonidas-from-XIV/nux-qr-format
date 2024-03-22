@@ -1,4 +1,3 @@
 (library
  (public_name nux-qr-format)
- (name nux_qr_format)
- (libraries yojson))
+ (name nux_qr_format))

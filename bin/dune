@@ -1,4 +1,4 @@
 (executable
  (public_name nux-qr-format)
  (name main)
- (libraries nux_qr_format stdio base base64 unix))
+ (libraries nux_qr_format stdio base base64 unix yojson))
