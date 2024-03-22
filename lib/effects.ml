@@ -91,21 +91,19 @@ module Reader (P : Pedal) : Parsed = struct
             variant_id P.name max
           |> failwith
     in
-    let params = variant.params in
     let params =
       List.mapi
         (fun off param ->
           let value = bin.[P.param_offset + off] |> int_of_char in
           { param with Param.value })
-        params
+        variant.params
     in
-    let variant = { variant with params } in
-    (enabled, variant)
+    (enabled, { variant with params })
 
   type t = bool * Variant.t
 
   let pp ppf (enabled, variant) =
-    Fmt.pf ppf "<%s enabled: %B: variant %a>" P.name enabled Variant.pp variant
+    Fmt.pf ppf "<%s enabled: %B, variant %a>" P.name enabled Variant.pp variant
 end
 
 let param name formatter = { Param.name; value = 0; formatter }

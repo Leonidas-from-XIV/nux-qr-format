@@ -26,7 +26,7 @@ let pp_effect ppf = function
 let header = "\x0F\x01\x00"
 let order_offset = 0x5B
 
-type order = Comp | EFX | Amp | Eq | Gate | Mod | DLY | RVB | IR
+type order = Comp | EFX | Amp | EQ | Gate | Mod | DLY | RVB | IR
 
 let items = 9
 
@@ -34,7 +34,7 @@ let order_of_byte = function
   | 0x1 -> Comp
   | 0x2 -> EFX
   | 0x3 -> Amp
-  | 0x4 -> Eq
+  | 0x4 -> EQ
   | 0x5 -> Gate
   | 0x6 -> Mod
   | 0x7 -> DLY
@@ -43,6 +43,14 @@ let order_of_byte = function
   | _otherwise -> failwith "Invalid ordering byte"
 
 let decode v =
+  (* verify header match *)
+  String.iteri
+    (fun index char ->
+      match v.[index] = char with
+      | true -> ()
+      | false -> failwith "Header mismatch")
+    header;
+
   let effect_order =
     List.init items (fun off ->
         let value = int_of_char @@ v.[order_offset + off] in
@@ -54,7 +62,7 @@ let decode v =
       | Comp -> Compressor (Effects.Compressor.decode v)
       | EFX -> EFX (Effects.EFX.decode v)
       | Amp -> Amp (Effects.Amp.decode v)
-      | Eq -> EQ (Effects.EQ.decode v)
+      | EQ -> EQ (Effects.EQ.decode v)
       | Mod -> Mod (Effects.Mod.decode v)
       | DLY -> DLY (Effects.DLY.decode v)
       | RVB -> RVB (Effects.RVB.decode v)
@@ -63,5 +71,4 @@ let decode v =
 
 let pp ppf v =
   let sep = Fmt.any "\n" in
-  let fmt : effect list Fmt.t = Fmt.list ~sep pp_effect in
-  Fmt.pf ppf "%a" fmt v
+  Fmt.pf ppf "%a" (Fmt.list ~sep pp_effect) v
