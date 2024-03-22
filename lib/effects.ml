@@ -232,7 +232,7 @@ module AmpDef : Pedal = struct
     let cut = percentage "Cut" in
     let gmbmtp = [ gain; master; bass; middle; treble; presence ] in
     let gmbmmt = [ gain; master; bass; mid_freq; middle; treble ] in
-    let vox = [ gain; master; bass; treble; cut ]  in
+    let vox = [ gain; master; bass; treble; cut ] in
     let nux = [ gain; master; bass; middle; treble ] in
     [
       {
@@ -258,9 +258,9 @@ module AmpDef : Pedal = struct
       { name = "Dual Rect"; params = gmbmtp };
       { name = "Die VH4"; params = gmbmtp };
       (* secret *)
-      { name = "Vibro King"; params = gmbmtp};
+      { name = "Vibro King"; params = gmbmtp };
       (* secret *)
-      { name = "Budda"; params = [gain; master; bass; middle; treble; cut]};
+      { name = "Budda"; params = [ gain; master; bass; middle; treble; cut ] };
       { name = "Mr. Z38"; params = [ gain; master; bass; treble; cut ] };
       {
         name = "Super Rvb";
@@ -269,7 +269,7 @@ module AmpDef : Pedal = struct
       (* secret *)
       { name = "Brit Blues"; params = gmbmtp };
       (* secret *)
-      { name = "Match D30"; params = [gain; master; bass; treble; cut]};
+      { name = "Match D30"; params = [ gain; master; bass; treble; cut ] };
       (* secret *)
       { name = "Brit 2000"; params = gmbmtp };
       (* final secret *)
