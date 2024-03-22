@@ -1,4 +1,15 @@
-type formatter = Switch | Toggle of string list | Percentage
+type formatter =
+  | Switch
+  | Toggle of string list
+  | Percentage
+  | Db of int * int
+  | Hz of int * int
+  | Range of int * int
+
+let scale_value low high value =
+  let range = abs (low - high) in
+  let step_size = float_of_int range /. 100. in
+  float_of_int low +. (step_size *. float_of_int value)
 
 module Param = struct
   type t = {
@@ -12,7 +23,26 @@ module Param = struct
     let pp_value =
       match formatter with
       | Percentage -> fun ppf v -> Fmt.pf ppf "%d%%" v
-      | _ -> fun ppf _v -> Fmt.pf ppf "TODO"
+      | Switch -> (
+          fun ppf -> function
+            | 0 -> Fmt.pf ppf "%s" "off"
+            | _ -> Fmt.pf ppf "%s" "on")
+      | Db (low, high) ->
+          fun ppf v ->
+            let db = scale_value low high v in
+            Fmt.pf ppf "%.1f dB" db
+      | Range (low, high) ->
+          fun ppf v ->
+            let db = scale_value low high v in
+            Fmt.pf ppf "%.1f" db
+      | Hz (low, high) ->
+          fun ppf v ->
+            let hz = scale_value low high v in
+            Fmt.pf ppf "%.0f Hz" hz
+      | Toggle options ->
+          fun ppf v ->
+            let name = List.nth options v in
+            Fmt.pf ppf "%s" name
     in
     Fmt.pf ppf "%s=%a" name pp_value value
 end
@@ -57,8 +87,8 @@ module Reader (P : Pedal) : Parsed = struct
       | None ->
           let max = List.length P.variants - 1 in
           Format.asprintf
-            "Looking up effect variant %d failed (only up to %d supported)"
-            variant_id max
+            "Looking up effect variant %d failed (%s only supports up to %d)"
+            variant_id P.name max
           |> failwith
     in
     let params = variant.params in
@@ -224,35 +254,37 @@ module EQDef : Pedal = struct
   let param_offset = 0x26
 
   let variants =
+    let slider name = param name (Range (-15, 15)) in
     [
       {
         Variant.name = "6-Band";
-        (* TODO wrong, these are sliders *)
         params =
           [
-            percentage "100";
-            percentage "220";
-            percentage "500";
-            percentage "1.2K";
-            percentage "2.6K";
-            percentage "6.4K";
+            slider "100";
+            slider "220";
+            slider "500";
+            slider "1.2K";
+            slider "2.6K";
+            slider "6.4K";
           ];
       };
+      (* there is a value between 6 and 10 but its not selectable *)
+      { name = "<Unlisted>"; params = [] };
       {
         name = "10-Band";
         params =
           [
-            percentage "Vol";
-            percentage "31.25";
-            percentage "62.5";
-            percentage "125";
-            percentage "250";
-            percentage "500";
-            percentage "1K";
-            percentage "2K";
-            percentage "4K";
-            percentage "8K";
-            percentage "16K";
+            slider "Vol";
+            slider "31.25";
+            slider "62.5";
+            slider "125";
+            slider "250";
+            slider "500";
+            slider "1K";
+            slider "2K";
+            slider "4K";
+            slider "8K";
+            slider "16K";
           ];
       };
     ]
@@ -291,10 +323,9 @@ module ModDef : Pedal = struct
         name = "S.C.F.";
         params =
           [
-            (* TODO investigate *)
-            param "Mode" (Toggle [ "Chorus"; "P.M."; "Flanger" ]);
             speed;
             width;
+            param "Mode" (Toggle [ "Chorus"; "P.M."; "Flanger" ]);
             intensity;
           ];
       };
@@ -385,9 +416,9 @@ module IRDef : Pedal = struct
 
   let variants =
     (* these are all kind of wrong, need to investigate *)
-    let level = percentage "Level" in
-    let low_cut = percentage "Low Cut" in
-    let high_cut = percentage "Hight Cut" in
+    let level = param "Level" (Db (-12, 12)) in
+    let low_cut = param "Low Cut" (Hz (20, 300)) in
+    let high_cut = param "Hight Cut" (Hz (5000, 20000)) in
     (* all IRs have the same params *)
     let params = [ level; low_cut; high_cut ] in
     List.map
