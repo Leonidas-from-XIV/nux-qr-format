@@ -74,7 +74,8 @@ module Reader (P : Pedal) : Parsed = struct
   let switch_to_value v =
     let v = int_of_char v in
     let mask = 0x40 in
-    let enabled = v land mask = mask in
+    (* enabled when the mask is not set *)
+    let enabled = v land mask <> mask in
     let effect = (v lor mask) - mask in
     (* the effects start at 1, but our lists start at 0 *)
     (enabled, effect - 1)
