@@ -213,6 +213,7 @@ module AmpDef : Pedal = struct
     let cut = percentage "Cut" in
     let gmbmtp = [ gain; master; bass; middle; treble; presence ] in
     let gmbmmt = [ gain; master; bass; mid_freq; middle; treble ] in
+    let vox = [ gain; master; bass; treble; cut ]  in
     let nux = [ gain; master; bass; middle; treble ] in
     [
       {
@@ -222,9 +223,13 @@ module AmpDef : Pedal = struct
       { name = "Deluxe Rvb"; params = [ gain; master; bass; middle; treble ] };
       { name = "Bass Mate"; params = gmbmtp };
       { name = "Tweedy"; params = [ gain; master; percentage "Tone" ] };
+      (* secret amp not exposed in app *)
+      { name = "Twin Rvb"; params = gmbmtp };
       { name = "Hiwire"; params = gmbmtp };
       { name = "Cali Crunch"; params = gmbmtp };
-      { name = "Class A30"; params = [ gain; master; bass; treble; cut ] };
+      (* another secret amp not exposed in app *)
+      { name = "Class A15"; params = vox };
+      { name = "Class A30"; params = vox };
       { name = "Plexi 100"; params = gmbmtp };
       { name = "Plexi 45"; params = gmbmtp };
       { name = "Brit 800"; params = gmbmtp };
@@ -233,11 +238,23 @@ module AmpDef : Pedal = struct
       { name = "Fireman HBE"; params = gmbmtp };
       { name = "Dual Rect"; params = gmbmtp };
       { name = "Die VH4"; params = gmbmtp };
+      (* secret *)
+      { name = "Vibro King"; params = gmbmtp};
+      (* secret *)
+      { name = "Budda"; params = [gain; master; bass; middle; treble; cut]};
       { name = "Mr. Z38"; params = [ gain; master; bass; treble; cut ] };
       {
         name = "Super Rvb";
         params = [ gain; master; bass; middle; treble; bright ];
       };
+      (* secret *)
+      { name = "Brit Blues"; params = gmbmtp };
+      (* secret *)
+      { name = "Match D30"; params = [gain; master; bass; treble; cut]};
+      (* secret *)
+      { name = "Brit 2000"; params = gmbmtp };
+      (* final secret *)
+      { name = "Uber HiGain"; params = gmbmtp };
       { name = "AGL"; params = gmbmmt };
       { name = "MLD"; params = gmbmmt };
       { name = "Optima Air"; params = nux };
