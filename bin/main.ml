@@ -22,13 +22,18 @@ let dump qr_value =
   | Error (`Msg msg) -> Stdio.prerr_endline msg
   | Ok nux_data -> dump_data nux_data
 
-let decode qr_value =
+let decode serializer qr_value =
   match decode_qr_data qr_value with
   | Error (`Msg msg) -> Stdio.prerr_endline msg
   | Ok nux_data ->
       let d = Nux_qr_format.decode nux_data in
-      let s = Stdlib.Format.asprintf "%a" Nux.pp d in
+      let s = serializer d in
       Stdio.print_endline s
+
+let decode_pp = decode (Stdlib.Format.asprintf "%a" Nux.pp)
+
+let decode_json =
+  decode (fun data -> data |> Nux.to_yojson |> Yojson.Safe.to_string)
 
 let () =
   let argv = Sys.get_argv () in
@@ -39,5 +44,7 @@ let () =
       let qr_value = argv.(2) in
       match command with
       | "dump" -> dump qr_value
-      | "decode" -> decode qr_value
-      | _otherwise -> Stdio.prerr_endline "Usage: dump|decode <qr-data>")
+      | "decode" -> decode_pp qr_value
+      | "decode-json" -> decode_json qr_value
+      | _otherwise ->
+          Stdio.prerr_endline "Usage: dump|decode|decode-json <qr-data>")

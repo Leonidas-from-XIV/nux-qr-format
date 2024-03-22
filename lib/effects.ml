@@ -45,6 +45,9 @@ module Param = struct
             Fmt.pf ppf "%s" name
     in
     Fmt.pf ppf "%s=%a" name pp_value value
+
+  let to_yojson { name; value; formatter = _ } =
+    `Assoc [ ("name", `String name); ("value", `Int value) ]
 end
 
 module Variant = struct
@@ -54,6 +57,13 @@ module Variant = struct
     Fmt.pf ppf "%S; params = [%a]" name
       (Fmt.list ~sep:(Fmt.any ", ") Param.pp)
       params
+
+  let to_yojson { name; params } =
+    `Assoc
+      [
+        ("name", `String name);
+        ("params", `List (List.map Param.to_yojson params));
+      ]
 end
 
 module type Pedal = sig
@@ -68,6 +78,7 @@ module type Parsed = sig
 
   val decode : string -> t
   val pp : t Fmt.t
+  val to_yojson : t -> Yojson.Safe.t
 end
 
 module Reader (P : Pedal) : Parsed = struct
@@ -105,6 +116,14 @@ module Reader (P : Pedal) : Parsed = struct
 
   let pp ppf (enabled, variant) =
     Fmt.pf ppf "<%s enabled: %B, variant %a>" P.name enabled Variant.pp variant
+
+  let to_yojson (enabled, variant) =
+    `Assoc
+      [
+        ("name", `String P.name);
+        ("enabled", `Bool enabled);
+        ("variant", Variant.to_yojson variant);
+      ]
 end
 
 let param name formatter = { Param.name; value = 0; formatter }

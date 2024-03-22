@@ -72,3 +72,16 @@ let decode v =
 let pp ppf v =
   let sep = Fmt.any "\n" in
   Fmt.pf ppf "%a" (Fmt.list ~sep pp_effect) v
+
+let effect_to_yojson = function
+  | Noisegate ng -> Effects.Noisegate.to_yojson ng
+  | Compressor comp -> Effects.Compressor.to_yojson comp
+  | EFX efx -> Effects.EFX.to_yojson efx
+  | Amp amp -> Effects.Amp.to_yojson amp
+  | EQ eq -> Effects.EQ.to_yojson eq
+  | Mod mod' -> Effects.Mod.to_yojson mod'
+  | DLY dly -> Effects.DLY.to_yojson dly
+  | RVB rvb -> Effects.RVB.to_yojson rvb
+  | IR ir -> Effects.IR.to_yojson ir
+
+let to_yojson v = `List (List.map effect_to_yojson v)

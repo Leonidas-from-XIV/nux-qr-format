@@ -13,6 +13,7 @@ depends: [
   "stdio" {>= "v0.15"}
   "base" {>= "v0.15"}
   "base64" {>= "3.5"}
+  "yojson" {>= "2.0"}
   "odoc" {with-doc}
 ]
 build: [
